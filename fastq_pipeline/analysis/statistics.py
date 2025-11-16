@@ -4,47 +4,47 @@ import gzip
 import os
 import matplotlib.pyplot as plt
 import sys 
+import glob 
+
 
 # 1. Core Functions: Calculation and Summary 
 
-def calculate_read_stats(fastq_file, barcode_id):
-    """
-    Parses a gzipped FASTQ file and calculates read length and mean Phred score
-    for each read, returning the results as a Pandas DataFrame.
-    """
+def calculate_read_stats(fastq_file): 
     stats_data = []
+    # retrive file's name 
+    base_name = os.path.basename(fastq_file)
+    file_barcode_id = base_name.split('.')[0] 
+    
     try:
         with gzip.open(fastq_file, "rt") as handle:
             for record in SeqIO.parse(handle, "fastq"):
+                
                 read_length = len(record.seq)
                 
                 if record.letter_annotations.get("phred_quality"):
                     qual_scores = record.letter_annotations["phred_quality"]
-                    mean_quality = sum(qual_scores) / len(qual_scores)
+                    mean_quality = sum(qual_scores) / len(qual_scores) if len(qual_scores) > 0 else 0
                 else:
                     mean_quality = 0 
                 
                 stats_data.append({
                     'Read_ID': record.id,
-                    'Barcode': barcode_id,
+                    'Barcode': file_barcode_id, 
                     'Seq_Length': read_length,
                     'Mean_Phred_Score': mean_quality,
                 })
     except Exception as e:
         print(f"Error processing {fastq_file}: {e}", file=sys.stderr)
-        return pd.DataFrame()
+        return pd.DataFrame(), "" 
         
-    return pd.DataFrame(stats_data)
+    stats_df = pd.DataFrame(stats_data)
+    return stats_df, file_barcode_id
 
-# calculate 25th 50th 75th of sequence data
-def calculate_summary_stats(df: pd.DataFrame):
-    """
-    Calculates 25th, 50th (median), and 75th percentiles (Q25, Q50, Q75) for key metrics.
-    """
-    if df.empty:
+def calculate_summary_stats(stats_df):
+    if stats_df.empty:
         return None
-    length_summary = df['Seq_Length'].describe(percentiles=[.25, .5, .75])
-    quality_summary = df['Mean_Phred_Score'].describe(percentiles=[.25, .5, .75])
+    length_summary = stats_df['Seq_Length'].describe(percentiles=[.25, .5, .75])
+    quality_summary = stats_df['Mean_Phred_Score'].describe(percentiles=[.25, .5, .75])
 
     summary_data = {
         'Total_Reads': int(length_summary['count']),
@@ -59,26 +59,23 @@ def calculate_summary_stats(df: pd.DataFrame):
     }
     return summary_data
 
-
-def save_stats_to_csv(df, output_dir, barcode):
-    """Saves a DataFrame of per-read statistics to a CSV file."""
+def save_stats_to_csv(stats_df, output_dir, barcode):
+    os.makedirs(output_dir, exist_ok=True) 
     output_csv = os.path.join(output_dir, f"{barcode}_stats.csv")
-    df.to_csv(output_csv, index=False)
+    stats_df.to_csv(output_csv, index=False)
     print(f"-> Saved read statistics to: {output_csv}")
-    
-    
+    return output_dir
+
 # 2. Plotting Functions 
 
-def plot_individual_histograms(df, output_dir, barcode):
-    """Generates and saves separate histograms for length and quality for one barcode."""
+def plot_individual_histograms(stats_df, output_dir, barcode):
+    os.makedirs(output_dir, exist_ok=True)
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
-    # Histogram of Read length
-    df['Seq_Length'].plot(kind='hist', bins=50, title=f'{barcode} Read Length Distribution', ax=axes[0])
+    stats_df['Seq_Length'].plot(kind='hist', bins=50, title=f'{barcode} Read Length Distribution', ax=axes[0])
     axes[0].set_xlabel("Read Length (bases)")
     
-    # Histogram of Mean Quality Score  
-    df['Mean_Phred_Score'].plot(kind='hist', bins=50, title=f'{barcode} Mean Phred Quality Score Distribution', ax=axes[1])
+    stats_df['Mean_Phred_Score'].plot(kind='hist', bins=50, title=f'{barcode} Mean Phred Quality Score Distribution', ax=axes[1])
     axes[1].set_xlabel("Mean Quality Score (Phred)")
     
     plt.tight_layout()
@@ -89,7 +86,7 @@ def plot_individual_histograms(df, output_dir, barcode):
     
 
 def plot_combined_boxplots(all_stats_dfs, output_dir):
-    """Generates and saves combined box plots for all barcodes/DFs."""
+    os.makedirs(output_dir, exist_ok=True)
     if not all_stats_dfs:
         print("Warning: No data to generate combined plots.")
         return
@@ -124,83 +121,65 @@ def plot_combined_boxplots(all_stats_dfs, output_dir):
     print(f"-> Saved combined quality boxplot to: {output_plot_quality}")
 
 
-# 3. Execution Functions 
+# TEST STANDALONE MODE
 
-def run_stats(args):
-    """
-    Entry point for the 'stats' command. Calculates per-read and summary statistics.
-    """
-    os.makedirs(args.output_dir, exist_ok=True)
-    print("--- Running STATS Command: Calculate Statistics and Save CSV ---")
+if __name__ == "__main__":
     
-    for file_path in args.input:
-        if os.path.exists(file_path) and file_path.endswith('.fastq.gz'):
-            base_name = os.path.basename(file_path)
-            if not base_name.endswith('.fastq.gz'):
-                 print(f"Warning: Skipping {file_path}. Input file name should end with '.fastq.gz'.", file=sys.stderr)
-                 continue
-
-            barcode = base_name.split('.')[0] 
-            print(f"Processing {barcode} from file: {file_path}")
-            
-            df = calculate_read_stats(file_path, barcode)
-            
-            if not df.empty:
-                # 1. Save the per-read data
-                save_stats_to_csv(df, args.output_dir, barcode)
-                
-                # 2. Calculate and display the statistic summary 
-                summary = calculate_summary_stats(df)
-                if summary:
-                    print("\n  Summary Statistics:")
-                    print(f"  Total Reads: {summary['Total_Reads']:,}")
-                    print("  --------------------------------------")
-                    print("  Metric         | Q25 | Median | Q75")
-                    print("  --------------------------------------")
-                    print(f"  Length (bases) | {summary['Length_Q25']:.0f} | {summary['Length_Median']:.0f} | {summary['Length_Q75']:.0f}")
-                    print(f"  Quality (Phred)| {summary['Quality_Q25']:.2f} | {summary['Quality_Median']:.2f} | {summary['Quality_Q75']:.2f}")
-                    print("  --------------------------------------\n")
-        else:
-            print(f"Error: Invalid or non-gzipped file path skipped: {file_path}", file=sys.stderr)
-            
-    print("\n✅ Stats Command Complete.")
-
-
-def run_plot(args):
-    """Entry point for the 'plot' command."""
-    os.makedirs(args.output_dir, exist_ok=True)
-    all_stats_dfs = [] 
+    # 0. Argument Check
+    if len(sys.argv) < 2:
+        print("Usage: python statistics.py <path_to_fastq.gz or path_to_directory_with_fastqs>")
+        sys.exit(1)
+        
+    input_path = sys.argv[1]
     
-    print("--- Running PLOT Command: Generating Visualizations ---")
+    print("--- Running Standalone Test ---")
     
-    for csv_file in args.input:
-        try:
-            df = pd.read_csv(csv_file)
-            if df.empty:
-                print(f"Warning: CSV file {csv_file} is empty. Skipping.")
-                continue
+    
+    # --- File/Directory Handling ---
+    if os.path.isdir(input_path):
+        # If input is a directory, find all gzipped FASTQ files
+        fastq_files = glob.glob(os.path.join(input_path, '*.fastq.gz'))
+        if not fastq_files:
+            print(f"Error: No *.fastq.gz files found in directory: {input_path}")
+            sys.exit(1)
+        print(f"Found {len(fastq_files)} FASTQ files in directory.")
+    else:
+        # If input is a single file
+        fastq_files = [input_path]
+        print(f"Processing single file: {input_path}")
+    # -------------------------------
+    
+    output_test_dir =  os.path.join("../data", "stat_test"           )
+    os.makedirs(output_test_dir, exist_ok=True)
+    all_stats_dfs = []
 
-            base_name = os.path.basename(csv_file)
-            barcode = base_name.split('_stats.csv')[0] 
-            df['Barcode'] = barcode 
-            
-            print(f"Processing {barcode} from file: {csv_file}")
-            
-            plot_individual_histograms(df, args.output_dir, barcode)
-            all_stats_dfs.append(df)
-            
-        except Exception as e:
-            print(f"Error reading or plotting {csv_file}: {e}", file=sys.stderr)
+    for i, fastq_file in enumerate(fastq_files):
+        
+        print(f"\n--- Processing File {i+1}/{len(fastq_files)}: {os.path.basename(fastq_file)} ---")
+
+        stats_df_A, barcode_id_A = calculate_read_stats(fastq_file)
+
+        if stats_df_A.empty:
+            print(f"Warning: Skipping {os.path.basename(fastq_file)} due to empty data.")
+            continue 
+        
+        
+        print(f"2. Summary Stats on {barcode_id_A} data:")
+        summary_data = calculate_summary_stats(stats_df_A)
+        print(pd.Series(summary_data).to_string())
+
+        print("3. Saving CSV and Individual Plots:")
+        returned_dir = save_stats_to_csv(stats_df_A, output_test_dir, barcode_id_A)
+        plot_individual_histograms(stats_df_A, returned_dir, barcode_id_A)
+        
+        all_stats_dfs.append(stats_df_A)
 
     if all_stats_dfs:
-        plot_combined_boxplots(all_stats_dfs, args.output_dir)
+        print("\n--- Running Combined Plot Test ---")
+        plot_combined_boxplots(all_stats_dfs, output_test_dir)
+    else:
+        print("\nNo valid data found to run combined plots.")
 
-    print("\n Plot Command Complete.")
-    
-    
-def run_filter(args):
-    """Placeholder for the filtering function (Step 3)."""
-    
-    print("\n Filtering command (Step 3) not yet implemented!")
-    print(f"Criteria: Min Length={args.min_len}, Min Quality={args.min_qual}")
-    print("Implement the logic here to filter reads from the input FASTQ.GZ and write to the output FASTQ.GZ.")
+    print("\nTest analysis complete. Check the 'stat_test_output' folder.")
+
+    pass
