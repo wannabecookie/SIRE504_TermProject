@@ -85,40 +85,43 @@ def plot_individual_histograms(stats_df, output_dir, barcode):
     print(f"-> Saved histograms to: {output_plot}")
     
 
-def plot_combined_boxplots(all_stats_dfs, output_dir):
+def plot_boxplots(all_stats_dfs, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     if not all_stats_dfs:
-        print("Warning: No data to generate combined plots.")
+        print("Warning: No data to generate plots.")
         return
 
-    print("Generating combined Box Plots for barcode comparison...")
-    final_df_combined = pd.concat(all_stats_dfs, ignore_index=True)
+    print("Generating Box Plots for each barcode...")
     
-    # Box Plot of Read Length 
-    plt.figure(figsize=(10, 6))
-    final_df_combined.boxplot(column='Seq_Length', by='Barcode', grid=False, medianprops=dict(color='red'), ax=plt.gca())
-    plt.suptitle('Read Length Comparison Across Barcodes')
-    plt.title('') 
-    plt.ylabel('Read Length (bases)')
-    plt.xlabel('Barcode')
-    plt.tight_layout()
-    output_plot_length = os.path.join(output_dir, f'{file_barcode_id}_combined_length_boxplot.png')
-    plt.savefig(output_plot_length)
-    plt.close()
-    print(f"-> Saved combined length boxplot to: {output_plot_length}")
+    final_df_combined = pd.concat(all_stats_dfs, ignore_index=True)
 
-    # Box Plot of Mean Quality Score ---
-    plt.figure(figsize=(10, 6))
-    final_df_combined.boxplot(column='Mean_Phred_Score', by='Barcode', grid=False, medianprops=dict(color='red'), ax=plt.gca())
-    plt.suptitle('Mean Quality Score Comparison Across Barcodes')
-    plt.title('')
-    plt.ylabel('Mean Quality Score (Phred)')
-    plt.xlabel('Barcode')
-    plt.tight_layout()
-    output_plot_quality = os.path.join(output_dir, f'{file_barcode_id}_combined_length_boxplot.png')
-    plt.savefig(output_plot_quality)
-    plt.close()
-    print(f"-> Saved combined quality boxplot to: {output_plot_quality}")
+    unique_barcodes = final_df_combined['Barcode'].unique()
+    
+    # Create boxPlots for Each Barcode ---
+    for barcode in unique_barcodes:
+        
+        df_barcode = final_df_combined[final_df_combined['Barcode'] == barcode]
+        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        # Box Plot of Read Length 
+        df_barcode.boxplot(column='Seq_Length', grid=False, 
+                           medianprops=dict(color='red'), ax=axes[0])
+        axes[0].set_title('Read Length Distribution') 
+        axes[0].set_ylabel('Read Length (bases)')
+        axes[0].set_xlabel(f'Barcode {barcode}')
+        
+        # Box Plot of Mean Quality Score 
+        df_barcode.boxplot(column='Mean_Phred_Score', grid=False, 
+                           medianprops=dict(color='red'), ax=axes[1])
+        
+        axes[1].set_title('Mean Quality Score Distribution')
+        axes[1].set_ylabel('Mean Quality Score (Phred)')
+        axes[1].set_xlabel(f'Barcode {barcode}')
+        
+        plt.tight_layout()
+        output_plot = os.path.join(output_dir, f'{barcode}_boxplots.png')
+        plt.savefig(output_plot)
+        plt.close(fig)
+        print(f"-> Saved combined boxplots for {barcode} to: {output_plot}")
 
 
 # TEST STANDALONE MODE
@@ -151,8 +154,8 @@ if __name__ == "__main__":
     
     output_test_dir =  os.path.join("../data", "stat_test"           )
     os.makedirs(output_test_dir, exist_ok=True)
-    all_stats_dfs = []
-
+    all_stats_dfs = [] 
+    
     for i, fastq_file in enumerate(fastq_files):
         
         print(f"\n--- Processing File {i+1}/{len(fastq_files)}: {os.path.basename(fastq_file)} ---")
@@ -175,10 +178,10 @@ if __name__ == "__main__":
         all_stats_dfs.append(stats_df_A)
 
     if all_stats_dfs:
-        print("\n--- Running Combined Plot Test ---")
-        plot_combined_boxplots(all_stats_dfs, output_test_dir)
+        print("\n--- Running Plot Test ---")
+        plot_boxplots(all_stats_dfs, output_test_dir)
     else:
-        print("\nNo valid data found to run combined plots.")
+        print("\nNo valid data found to run plots.")
 
     print("\nTest analysis complete. Check the 'stat_test_output' folder.")
     
