@@ -115,7 +115,7 @@ def plot_boxplots(all_stats_dfs, output_dir):
         
         axes[1].set_title('Mean Quality Score Distribution')
         axes[1].set_ylabel('Mean Quality Score (Phred)')
-        axes[1].set_xlabel(f'Barcode {barcode}')
+        axes[1].set_xlabel(f'Barcode {barcode}') 
         
         plt.tight_layout()
         output_plot = os.path.join(output_dir, f'{barcode}_boxplots.png')
