@@ -68,7 +68,7 @@ def save_stats_to_csv(stats_df, output_dir, barcode):
 
 # 2. Plotting Functions 
 
-def plot_individual_histograms(stats_df, output_dir, barcode):
+def plot_histograms(stats_df, output_dir, barcode):
     os.makedirs(output_dir, exist_ok=True)
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
@@ -90,8 +90,6 @@ def plot_boxplots(all_stats_dfs, output_dir):
     if not all_stats_dfs:
         print("Warning: No data to generate plots.")
         return
-
-    print("Generating Box Plots for each barcode...")
     
     final_df_combined = pd.concat(all_stats_dfs, ignore_index=True)
 
@@ -115,19 +113,71 @@ def plot_boxplots(all_stats_dfs, output_dir):
         
         axes[1].set_title('Mean Quality Score Distribution')
         axes[1].set_ylabel('Mean Quality Score (Phred)')
-        axes[1].set_xlabel(f'Barcode {barcode}')
+        axes[1].set_xlabel(f'Barcode {barcode}') 
         
         plt.tight_layout()
         output_plot = os.path.join(output_dir, f'{barcode}_boxplots.png')
         plt.savefig(output_plot)
         plt.close(fig)
-        print(f"-> Saved combined boxplots for {barcode} to: {output_plot}")
+        print(f"-> Saved boxplots for {barcode} to: {output_plot}")
+
+
+def stat(input_dir):
+    print(f"\n===Start calculating statistic and visualization===")
+    if os.path.isdir(input_dir):
+    # If input is a directory, find all gzipped FASTQ files
+        fastq_files = glob.glob(os.path.join(input_dir, '*.fastq.gz'))
+        if not fastq_files:
+            print(f"Error: No *.fastq.gz files found in directory: {input_dir}")
+            sys.exit(1)
+        print(f"Found {len(fastq_files)} FASTQ files in directory.")
+    else:
+        # If input is a single file
+        fastq_files = [input_dir]
+        print(f"Processing single file: {input_dir}")
+    # -------------------------------
+    
+    output_test_dir =  os.path.join("../data", "stat_result")
+    os.makedirs(output_test_dir, exist_ok=True)
+    all_stats_dfs = []
+
+    for i, fastq_file in enumerate(fastq_files):
+        
+        print(f"\n--- Processing File {i+1}/{len(fastq_files)}: {os.path.basename(fastq_file)} ---")
+
+        stats_df, barcode_id = calculate_read_stats(fastq_file)
+
+        if stats_df.empty:
+            print(f"Warning: Skipping {os.path.basename(fastq_file)} due to empty data.")
+            continue 
+        
+        
+        print(f"Summary Stats on {barcode_id} data:")
+        summary_data = calculate_summary_stats(stats_df)
+        print(pd.Series(summary_data).to_string())
+
+        print("\nSaving CSV and Visualization:")
+        returned_dir = save_stats_to_csv(stats_df, output_test_dir, barcode_id)
+        plot_histograms(stats_df, returned_dir, barcode_id)
+        
+        all_stats_dfs.append(stats_df)
+
+
+    # if all_stats_dfs:
+    #     print("\n--- Running Combined Plot Test ---")
+        plot_boxplots(all_stats_dfs, output_test_dir)
+    # else:
+    #     print("\nNo valid data found to run combined plots.")
+
+    print("\nTest analysis completed. Check the 'stat_result' folder.")
+    
+    return output_test_dir
 
 
 # TEST STANDALONE MODE
 
+
 if __name__ == "__main__":
-    
     # 0. Argument Check
     if len(sys.argv) < 2:
         print("Usage: python statistics.py <path_to_fastq.gz or path_to_directory_with_fastqs>")
@@ -152,7 +202,7 @@ if __name__ == "__main__":
         print(f"Processing single file: {input_path}")
     # -------------------------------
     
-    output_test_dir =  os.path.join("../data", "stat_test"           )
+    output_test_dir =  os.path.join("../data", "stat_result")
     os.makedirs(output_test_dir, exist_ok=True)
     all_stats_dfs = [] 
     
@@ -160,22 +210,22 @@ if __name__ == "__main__":
         
         print(f"\n--- Processing File {i+1}/{len(fastq_files)}: {os.path.basename(fastq_file)} ---")
 
-        stats_df_A, barcode_id_A = calculate_read_stats(fastq_file)
+        stats_df, barcode_id = calculate_read_stats(fastq_file)
 
-        if stats_df_A.empty:
+        if stats_df.empty:
             print(f"Warning: Skipping {os.path.basename(fastq_file)} due to empty data.")
             continue 
         
         
-        print(f"2. Summary Stats on {barcode_id_A} data:")
-        summary_data = calculate_summary_stats(stats_df_A)
+        print(f"2. Summary Stats on {barcode_id} data:")
+        summary_data = calculate_summary_stats(stats_df)
         print(pd.Series(summary_data).to_string())
 
         print("3. Saving CSV and Individual Plots:")
-        returned_dir = save_stats_to_csv(stats_df_A, output_test_dir, barcode_id_A)
-        plot_individual_histograms(stats_df_A, returned_dir, barcode_id_A)
+        returned_dir = save_stats_to_csv(stats_df, output_test_dir, barcode_id)
+        plot_histograms(stats_df, returned_dir, barcode_id)
         
-        all_stats_dfs.append(stats_df_A)
+        all_stats_dfs.append(stats_df)
 
     if all_stats_dfs:
         print("\n--- Running Plot Test ---")
@@ -183,6 +233,6 @@ if __name__ == "__main__":
     else:
         print("\nNo valid data found to run plots.")
 
-    print("\nTest analysis complete. Check the 'stat_test_output' folder.")
+    print("\nTest analysis complete. Check the 'stat_result' folder.")
     
     pass
