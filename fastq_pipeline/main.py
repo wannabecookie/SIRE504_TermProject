@@ -3,7 +3,6 @@ from filtering.filter import *
 from analysis.statistics import *
 from cli import argparser
 
-
 parser = argparser()
 args = parser.parse_args()
 
@@ -20,7 +19,6 @@ if args.command == 'filteredProg':
     filtered_fastq(pass_id, extractBQ_dir)
     print(f"\n============Program completed============")
     
-
 elif args.command == 'extractBQ':
     input_file = args.input_file
     output_dir = args.output_dir
