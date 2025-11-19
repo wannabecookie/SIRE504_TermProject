@@ -36,14 +36,10 @@ def grouped_fastq(input_file, output_dir):
             
             barcode_counts[barcode] = barcode_counts.get(barcode, 0) + 1
             
-        for file_handle in barcode_files.values():
+        for file_handle in barcode_files.values(): #close file
             file_handle.close()
-        
-        # print(barcode_files)
                     
         print(f"\nProcessed {total_reads} total reads")
-    
-
     
     #Print summary
     print("\n=== Grouping Barcode Summary ===")
