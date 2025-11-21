@@ -14,6 +14,7 @@ def filter_csv(input_dir):
         file_name = os.path.basename(files) #get only filename
         print(f"\nWorking on: {file_name}")
         
+        # recieve user input
         try:    
             seq_len = int(input(f"Enter minimum cut-off sequence length for {file_name}: "))
             quality = float(input(f"Enter minimum Q-score for {file_name}: "))
@@ -23,7 +24,7 @@ def filter_csv(input_dir):
             quality = float(input(f"Enter minimum Q-score for {file_name}: "))
             
         
-        df = pd.read_csv(files)
+        df = pd.read_csv(files) 
         filtered_csv = df.query('`Seq_Length` > @seq_len and `Mean_Phred_Score` > @quality')
         total_read = len(df)
         total_filtered = len(filtered_csv)
@@ -55,8 +56,8 @@ def filtered_fastq(pass_id, barcode_dir):
 
         output_file_path = os.path.join(output_dir, f"filtered_{file_name}.fastq.gz")
         
-        input_file = gzip.open(files, 'rt')
-        output_file = gzip.open(output_file_path, 'wt')
+        input_file = gzip.open(files, 'rt') #variable to handle with open file for reading
+        output_file = gzip.open(output_file_path, 'wt') #variable to handle with open file for wrriting
         
         for record in SeqIO.parse(input_file, "fastq"):
             if record.id in pass_ids_set: #direct look up for record id in pass ids
