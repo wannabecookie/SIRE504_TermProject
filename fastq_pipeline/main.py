@@ -15,6 +15,7 @@ if args.command == 'filteredProg':
         extractBQ_dir = grouped_fastq(input_file, output_dir)
         
     stat_dir = stat(extractBQ_dir)
+    print(f"\n===Start filtering===")
     pass_id = filter_csv(stat_dir)
     filtered_fastq(pass_id, extractBQ_dir)
     print(f"\n============Program completed============")
