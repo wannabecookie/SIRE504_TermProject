@@ -6,10 +6,8 @@ import os
 
 def extract_barcode(record):
     match = re.search(r'barcode=(\S+)', record.description)
-    if match:
-        return match.group(1) #barcode
-    else:
-        return None 
+    return match.group(1) #barcode
+
 
 def grouped_fastq(input_file, output_dir): 
     os.makedirs(output_dir, exist_ok=True)
