@@ -1,5 +1,3 @@
-# SIRE504_TermProject
-
 # 🧬 Fastq Data Analysis Pipeline
 
 ## Table of Contents
