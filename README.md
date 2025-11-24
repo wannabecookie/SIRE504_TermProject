@@ -1,17 +1,16 @@
 # SIRE504_TermProject
-# SIRE504_TermProject
 
 # 🧬 Fastq Data Analysis Pipeline
 
 ## Table of Contents
-1.  [🚀 Overview](#-overview)
+1.  [🚀 Overview](#1.-Overview)
 2.  [📦 Project Structure](#-project-structure)
 3.  [✨ Features](#-features)
 4.  [🛠️ Installation](#%EF%B8%8F-installation)
 5.  [⚙️ Usage](#%EF%B8%8F-usage)
     * [Full Pipeline: `filteredProg`](#full-pipeline-filteredprog)
     * [Step-by-Step Commands](#step-by-step-commands)
-6.  [💡 Contact](#Contact)
+6.  [💡 Contacts](#Contacts)
 
 ---
 
@@ -69,53 +68,61 @@ conda env create -y -f environment.yml
 ## ⚙️ 5. Usage
 
 The pipeline is executed via **main.py** using subcommands defined in **cli.py**.
-### Full Pipeline: `filteredProg`
-This command runs all steps sequentially: **Barcode Extraction** $\rightarrow$ **Statistics Calculation** $\rightarrow$ **Sequences Filtering**.
+## Full Pipeline: `filteredProg`
+This command runs all steps sequentially: **Barcode Extraction** $\rightarrow$ **Statistics Calculation** $\rightarrow$ **Sequences Filtering**, outputting a filtered fastq.gz file.
 
 ---
 
 ### Bash Command Example
 ```bash
-python main.py filteredProg -i <input_file.fastq.gz> -o <output_directory>
+python main.py filteredProg -i <input_file.fastq.gz> [-o] <output_directory>
 ```
-## ⚙️ Additional Arguments for `filteredProg`
+### ⚙️ Additional Arguments for `filteredProg`
 
 | Argument | Description | Default | Required |
 | :--- | :--- | :--- | :--- |
 | **-i, --input-file** | The single input FASTQ file (must be .fastq.gz). | None | Yes |
-| **-o, --output-dir** | Directory where intermediate (grouped FASTQ) files are saved. | ./data/processed_data | No |
+| **-o, --output-dir** | Directory where intermediate (grouped FASTQ) files are saved. | ../data/processed_data | No |
 
-### Step-by-step command
+## Step-by-step commands
 you can run each step individually following:
 
-### 5.1. Extract Barcodes: `extractBQ`
+## 5.1. Extract Barcodes: `extractBQ`
 Splits the input .fastq.gz file into multiple .fastq.gz files based on the barcode= tag in the read description.
 
 ```bash
 python main.py extractBQ -i <input_file.fastq.gz> [-o] <output_directory>
 ```
 
-### 5.2. Calculate Statistics & Plot: `statCal`
+### ⚙️ Additional Arguments for `extractBQ`
+
+| Argument | Description | Default | Required |
+| :--- | :--- | :--- | :--- |
+| **-i, --input-file** | The single input FASTQ file (must be .fastq.gz). | None | Yes |
+| **-o, --output-dir** | Directory where intermediate (grouped FASTQ) files are saved. | ../data/processed_data | No |
+
+
+## 5.2. Calculate Statistics & Plot: `statCal`
 Calculates stat. for all of the FASTQ files in the input directory and create CSV files and plots(histogram and boxplot).
 
 ```bash
 python main.py statCal -d <directory_with_grouped_fastqs>
 ```
 
-## ⚙️ Additional Arguments for `statCal`
+### ⚙️ Additional Arguments for `statCal`
 
 | Argument | Description | Default | Required |
 | :--- | :--- | :--- | :--- |
 | **-d, --input-dir** | Directory containing the grouped .fastq.gz files from extractBQ. | None | Yes |
 
-### 5.3. Filter Reads: `filterRead`
+## 5.3. Filter Reads: `filterRead`
 Reads the statistics CSV files, ask the user for length and quality cut-offs per barcode, and creates new filtered .fastq.gz files based on that values
 
 ```bash
-python main.py filterRead -d <directory_with_stat_csvs> -b <directory_with_grouped_fastqs>
+python main.py filterRead -d <directory_with_stat_csvs> [-b] <directory_with_grouped_fastqs>
 ```
 
-## ⚙️ Additional Arguments for `filterRead`
+### ⚙️ Additional Arguments for `filterRead`
 
 | Argument | Description | Default | Required |
 | :--- | :--- | :--- | :--- |
@@ -123,7 +130,7 @@ python main.py filterRead -d <directory_with_stat_csvs> -b <directory_with_group
 | **-b, --barcode-dir** | Directory contain the original grouped .fastq.gz files. | ../data/processed_data | No |
 
 
-## 💡 6. Contact
+## 💡 6. Contacts
 Saranyaporn Kunawongkrit - [@wannabecookie](https://github.com/wannabecookie) - Saranyaporn.kun@student.mahidol.edu
 
 Wongsatorn Thummawong - [@WONGSATORN-SIMB](https://github.com/WONGSATORN-SIMB) - Wongsatorn.thu@student.mahidol.edu
