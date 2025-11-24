@@ -48,14 +48,18 @@ def calculate_summary_stats(stats_df):
 
     summary_data = {
         'Total_Reads': int(length_summary['count']),
+        'Length_Min': length_summary['min'],
         'Length_Mean': length_summary['mean'],
         'Length_Q25': length_summary['25%'],
         'Length_Median': length_summary['50%'],
         'Length_Q75': length_summary['75%'],
+        'Length_Max': length_summary['max']
+        'Quality_Min': quality_summary['min']
         'Quality_Mean': quality_summary['mean'],
         'Quality_Q25': quality_summary['25%'],
         'Quality_Median': quality_summary['50%'],
         'Quality_Q75': quality_summary['75%'],
+        'Quality_Max': quality_summary['max']
     }
     return summary_data
 
